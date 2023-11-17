@@ -5,7 +5,7 @@
 package com.avispl.symphony.dal.avdevices.bridges.vaddio.avbridgenano.common;
 
 /**
- * NetworkEnum class provides during the monitoring and controlling process
+ * NetworkEnum class provides all regex and name of network interface
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 11/6/2023

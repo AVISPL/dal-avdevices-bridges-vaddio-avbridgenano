@@ -5,7 +5,7 @@
 package com.avispl.symphony.dal.avdevices.bridges.vaddio.avbridgenano.common;
 
 /**
- * StreamSettings class provides during the monitoring and controlling process
+ * StreamSettings class provides all regex and name of Streaming settings
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 11/6/2023
@@ -23,10 +23,7 @@ public enum StreamSettings {
 	IP_RTSP_URL(VaddioNanoConstant.IP_RTSP_URL, "IP RTSP_URL(.*?)\r\n", true),
 	IP_STREAMING_ENABLED(VaddioNanoConstant.IP_STREAMING_ENABLED, "IP Streaming_Enabled(.*?)\r\n", true),
 	HID_AUDIO_CONTROLS_ENABLED(VaddioNanoConstant.HID_AUDIO_CONTROLS_ENABLED, "HID Audio_Controls_Enabled(.*?)\r\n", false),
-	USB_ACTIVE(VaddioNanoConstant.USB_ACTIVE, "USB Active(.*?)\r\n", false),
 	USB_DEVICE(VaddioNanoConstant.USB_DEVICE, "USB Device(.*?)\r\n", false),
-	USB_ENUMERATION_SPEED(VaddioNanoConstant.USB_ENUMERATION_SPEED, "USB Enumeration_Speed(.*?)\r\n", false),
-	USB_RESOLUTION(VaddioNanoConstant.USB_RESOLUTION, "USB Resolution(.*?)\r\n", false),
 	IP_CUSTOM_RESOLUTION(VaddioNanoConstant.IP_CUSTOM_RESOLUTION, "IP Custom_Resolution(.*?)\r\n", true),
 	IP_VIDEO_QUALITY(VaddioNanoConstant.IP_VIDEO_QUALITY, "IP Video_Quality(.*?)\r\n", true),
 	IP_PROTOCOL(VaddioNanoConstant.IP_PROTOCOL, "IP Protocol(.*?)\r\n", true),

@@ -5,13 +5,13 @@
 package com.avispl.symphony.dal.avdevices.bridges.vaddio.avbridgenano.common;
 
 /**
- * AudioInputEnum  class defined the enum contains all command off the device
+ * AudioInput class defined the enum contains all command of audio input
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 10/30/2023
  * @since 1.0.0
  */
-public enum AudioInputEnum {
+public enum AudioInput {
 
 	LINE_IN_LEFT("Line In Left", "line_in_left", "LineInLeft"),
 	LINE_IN_RIGHT("Line In Right", "line_in_right", "LineInRight"),
@@ -22,13 +22,13 @@ public enum AudioInputEnum {
 	;
 
 	/**
-	 * AudioInputEnum constructor
+	 * AudioInput constructor
 	 *
 	 * @name name of {@link #name}
 	 * @command command of {@link #value}
 	 * @command propertyName of {@link #propertyName}
 	 */
-	AudioInputEnum(String name, String value, String propertyName) {
+	AudioInput(String name, String value, String propertyName) {
 		this.name = name;
 		this.value = value;
 		this.propertyName = propertyName;
@@ -73,7 +73,7 @@ public enum AudioInputEnum {
 	 */
 	public static <T extends Enum<T>> String getValueByName(String name) {
 		try {
-			for (AudioInputEnum audioInputEnum : AudioInputEnum.values()) {
+			for (AudioInput audioInputEnum : AudioInput.values()) {
 				if (audioInputEnum.getPropertyName().equalsIgnoreCase(name)) {
 					return audioInputEnum.getValue();
 				}

@@ -6,13 +6,11 @@ package com.avispl.symphony.dal.avdevices.bridges.vaddio.avbridgenano.common;
 
 import java.lang.reflect.Method;
 
-import com.avispl.symphony.api.dal.error.ResourceNotReachableException;
-
 /**
  * EnumTypeHandler class provides during the monitoring and controlling process
  *
  * @author Kevin / Symphony Dev Team<br>
- * Created on 11/9/2023
+ * Created on 11/6/2023
  * @since 1.0.0
  */
 public class EnumTypeHandler {
@@ -23,20 +21,20 @@ public class EnumTypeHandler {
 	 * @param name is String
 	 * @return T is metric instance
 	 */
-	public static <T extends Enum<T>> String getValueByName(Class<T> enumType, String name) {
+	public static <T extends Enum<T>> String getCommandByValue(Class<T> enumType, String name) {
 		try {
 			for (T metric : enumType.getEnumConstants()) {
 				Method methodName = metric.getClass().getMethod("getName");
 				String nameMetric = (String) methodName.invoke(metric); // getName executed
-				if (name.equals(nameMetric)) {
-					Method methodValue = metric.getClass().getMethod("getValue");
+				if (name.equalsIgnoreCase(nameMetric)) {
+					Method methodValue = metric.getClass().getMethod("getCommand");
 					return methodValue.invoke(metric).toString();
 				}
 			}
-			throw new ResourceNotReachableException("Fail to get enum " + enumType.getSimpleName() + " with name is " + name);
 		} catch (Exception e) {
-			throw new ResourceNotReachableException(e.getMessage(), e);
+			return null;
 		}
+		return null;
 	}
 
 	/**
@@ -56,9 +54,9 @@ public class EnumTypeHandler {
 					return methodName.invoke(metric).toString();
 				}
 			}
-			throw new ResourceNotReachableException("Fail to get enum " + enumType.getSimpleName() + " with value is " + value);
 		} catch (Exception e) {
-			throw new ResourceNotReachableException(e.getMessage(), e);
+			return null;
 		}
+		return null;
 	}
 }

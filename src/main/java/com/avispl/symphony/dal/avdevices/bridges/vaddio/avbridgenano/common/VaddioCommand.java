@@ -5,7 +5,7 @@
 package com.avispl.symphony.dal.avdevices.bridges.vaddio.avbridgenano.common;
 
 /**
- * VaddioCommand  class defined the enum contains all command off the device
+ * VaddioCommand class defined the enum contains all overall command of the device
  *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 10/30/2023
