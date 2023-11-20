@@ -61,7 +61,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	/**
 	 * cache to store key and value
 	 */
-	private Map<String, String> cacheKeyAndValue = new HashMap<>();
+	private final Map<String, String> cacheKeyAndValue = new HashMap<>();
 
 	/**
 	 * count the failed command
@@ -649,11 +649,11 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 							handleIPProtocol(value, stats);
 							break;
 						case IP_STREAMING_ENABLED:
-							String ipEnbale = VaddioNanoConstant.DISABLE;
+							String ipEnable = VaddioNanoConstant.DISABLE;
 							if (VaddioNanoConstant.TRUE.equalsIgnoreCase(value)) {
-								ipEnbale = VaddioNanoConstant.ENABLE;
+								ipEnable = VaddioNanoConstant.ENABLE;
 							}
-							value = ipEnbale;
+							value = ipEnable;
 							break;
 						default:
 							break;
@@ -793,16 +793,14 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 			isNextPollingInterval = true;
 			return;
 		}
-		if (isNextPollingInterval) {
-			for (AudioCrosspoint command : AudioCrosspoint.values()) {
-				String commandItem = command.getCommand();
-				for (AudioInput audioInputEnum : AudioInput.values()) {
-					String group = VaddioNanoConstant.CROSSPOINT_GAIN + command.getName() + VaddioNanoConstant.HASH + audioInputEnum.getPropertyName() + VaddioNanoConstant.GAIN;
-					sendCommandDetails(commandItem + VaddioNanoConstant.GAIN_COMMAND + audioInputEnum.getValue() + VaddioNanoConstant.GET, group);
-				}
+		for (AudioCrosspoint command : AudioCrosspoint.values()) {
+			String commandItem = command.getCommand();
+			for (AudioInput audioInputEnum : AudioInput.values()) {
+				String group = VaddioNanoConstant.CROSSPOINT_GAIN + command.getName() + VaddioNanoConstant.HASH + audioInputEnum.getPropertyName() + VaddioNanoConstant.GAIN;
+				sendCommandDetails(commandItem + VaddioNanoConstant.GAIN_COMMAND + audioInputEnum.getValue() + VaddioNanoConstant.GET, group);
 			}
-			isNextPollingInterval = false;
 		}
+		isNextPollingInterval = false;
 	}
 
 	/**

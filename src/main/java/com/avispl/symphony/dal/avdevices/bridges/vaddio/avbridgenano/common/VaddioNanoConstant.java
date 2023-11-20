@@ -37,13 +37,9 @@ public class VaddioNanoConstant {
 	public static final String IP_STREAMING_ENABLED = "IPStreaming";
 	public static final String IP_VIDEO_QUALITY = "IPVideoQuality";
 	public static final String HID_AUDIO_CONTROLS_ENABLED = "HIDAudioControls";
-	public static final String USB_ACTIVE = "USBActive";
 	public static final String USB_DEVICE = "USBDeviceName";
-	public static final String USB_ENUMERATION_SPEED = "USBEnumerationSpeed";
-	public static final String USB_RESOLUTION = "USBResolution";
 	public static final String STREAMING_SETTINGS = "StreamingSettings";
 	public static final String NETWORK_SETTINGS = "NetworkSettings";
-	public static final String USB_STREAM_MODE = "USB streaming mode";
 	public static final String IP_STREAM_MODE = "IP streaming mode";
 	public static final String STREAM_MODE = "StreamingMode";
 	public static final String AUDIO_MUTE = "AudioMute";
