@@ -40,6 +40,18 @@ import com.avispl.symphony.dal.util.StringUtils;
 /**
  * VaddioBridgeNanoCommunicator An implementation of SshCommunicator to provide communication and interaction with Vaddio Bridge Nano device
  *
+ * Monitoring
+ * Network information
+ * Streaming Settings
+ *
+ * Controlling
+ * Mute
+ * Volume(dB)
+ * Gain(dB)
+ * Reboot
+ * Video Mute
+ * Audio Mute
+ *
  * @author Kevin / Symphony Dev Team<br>
  * Created on 8/14/2023
  * @since 1.0.0
@@ -75,12 +87,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	 * Store previous/current ExtendedStatistics
 	 */
 	private ExtendedStatistics localExtendedStatistics;
-
-	/**
-	 * To check controlling process
-	 */
 	private boolean isEmergencyDelivery;
-
 	private boolean isNextPollingInterval;
 
 	/**
@@ -146,11 +153,11 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	 * {@inheritDoc}
 	 */
 	@Override
-	public void controlProperty(ControllableProperty controllableProperty) {
+	public void controlProperty(ControllableProperty controllableProperty) throws Exception {
 		reentrantLock.lock();
 		try {
 			this.timeout = controlSSHTimeout;
-			if (localExtendedStatistics == null || localExtendedStatistics.getStatistics().isEmpty() || localExtendedStatistics.getControllableProperties().isEmpty()) {
+			if (localExtendedStatistics == null || localExtendedStatistics.getStatistics().isEmpty()) {
 				return;
 			}
 			isEmergencyDelivery = true;
@@ -186,6 +193,15 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 					}
 					String videoMuteCommand = VaddioCommand.VIDEO_COMMAND;
 					sendCommandToControlDevice(videoMuteCommand, videoMute, groupName);
+					break;
+				case AUDIO_MUTE:
+					String audioMute = VaddioNanoConstant.OFF;
+					if (String.valueOf(VaddioNanoConstant.NUMBER_ONE).equalsIgnoreCase(value)) {
+						audioMute = VaddioNanoConstant.ON;
+					}
+					String audioMuteControl = VaddioCommand.AUDIO_COMMAND;
+					sendCommandToControlDevice(audioMuteControl, audioMute, groupName);
+					updateMasterMuteControl(stats, advancedControllableProperties, audioMute);
 					break;
 				case MUTE:
 					String muteValue = VaddioNanoConstant.OFF;
@@ -231,14 +247,37 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	@Override
 	protected void internalDestroy() {
 		if (localExtendedStatistics != null && localExtendedStatistics.getStatistics() != null && localExtendedStatistics.getControllableProperties() != null) {
-			localExtendedStatistics.getStatistics().clear();
-			localExtendedStatistics.getControllableProperties().clear();
+			localExtendedStatistics = null;
 		}
 		isNextPollingInterval = false;
 		cacheKeyAndValue.clear();
 
 		super.internalDestroy();
 	}
+
+	/**
+	 * Update Master mute control
+	 *
+	 * @param stats The updated device properties.
+	 * @param advancedControllableProperties The updated list of advanced controllable properties.
+	 * @param muteValue the muteValue is value of mute
+	 * @throws FailedLoginException if login error
+	 */
+	private void updateMasterMuteControl(Map<String, String> stats, List<AdvancedControllableProperty> advancedControllableProperties, String muteValue) throws FailedLoginException {
+		for (AudioCrosspoint audioCrosspoint : AudioCrosspoint.values()) {
+			String key = audioCrosspoint.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.MUTE;
+			if (VaddioNanoConstant.ON.equalsIgnoreCase(muteValue)) {
+				stats.put(key, VaddioNanoConstant.ON);
+				advancedControllableProperties.removeIf(item -> item.getName().equalsIgnoreCase(key));
+				continue;
+			}
+			String group = audioCrosspoint.getName() + VaddioNanoConstant.HASH;
+			String commandItem = audioCrosspoint.getCommand();
+			sendCommandDetails(commandItem + VaddioNanoConstant.VOLUME_COMMAND, group + VaddioNanoConstant.VOLUME);
+			populateMuteControl(stats, advancedControllableProperties, audioCrosspoint.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.MUTE);
+		}
+	}
+
 
 	/**
 	 * Update localExtendedStatistics by current polling interval
@@ -323,7 +362,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		try {
 			command = (command.trim() + VaddioNanoConstant.SPACE + value).toLowerCase(Locale.ROOT);
 			String response = send(command.contains("\r") ? command : command.concat("\r"));
-			if (StringUtils.isNullOrEmpty(response) || response.contains(VaddioNanoConstant.ERROR_RESPONSE)) {
+			if (StringUtils.isNullOrEmpty(response) || response.contains(VaddioNanoConstant.ERROR_RESPONSE) || !response.contains(VaddioNanoConstant.OK)) {
 				throw new IllegalArgumentException(String.format("Error when control %s, Syntax error command: %s", name, response));
 			}
 		} catch (Exception e) {
@@ -444,7 +483,15 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 				case GAIN_RECORD_OUT_RIGHT:
 					data = extractValue(data, VaddioNanoConstant.VOLUME_REGEX).split(VaddioNanoConstant.SPACE)[0];
 					populateVolumeControl(stats, advancedControllableProperty, command.getName(), key, data);
-					populateMuteControl(stats, advancedControllableProperty, command.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.MUTE);
+					key = command.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.MUTE;
+					String muteValue = StringUtils.isNullOrEmpty(cacheKeyAndValue.get(key)) ? VaddioNanoConstant.NONE : cacheKeyAndValue.get(key);
+					if (VaddioNanoConstant.ON.equalsIgnoreCase(extractValue(muteValue, VaddioNanoConstant.MUTE_REGEX))) {
+						stats.put(key, VaddioNanoConstant.ON);
+						String finalKey = key;
+						advancedControllableProperty.removeIf(item -> item.getName().equalsIgnoreCase(finalKey));
+						break;
+					}
+					populateMuteControl(stats, advancedControllableProperty, key);
 					break;
 				default:
 					logger.debug(String.format("the command %s doesn't support", command.getName()));
@@ -543,6 +590,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 			String data = StringUtils.isNullOrEmpty(cacheKeyAndValue.get(command.getName())) ? VaddioNanoConstant.NONE : cacheKeyAndValue.get(command.getName());
 			switch (command) {
 				case VIDEO_MUTE:
+				case AUDIO_MUTE:
 					data = extractValue(data, VaddioNanoConstant.VIDEO_MUTE_REGEX);
 					stats.put(key, VaddioNanoConstant.EMPTY);
 					int value = VaddioNanoConstant.ON.equalsIgnoreCase(data) ? 1 : 0;

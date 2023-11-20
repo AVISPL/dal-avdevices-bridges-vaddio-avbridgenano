@@ -12,6 +12,7 @@ package com.avispl.symphony.dal.avdevices.bridges.vaddio.avbridgenano.common;
  */
 public class VaddioNanoConstant {
 	public static final String NONE = "None";
+	public static final String OK = "OK";
 	public static final String OFF = "Off";
 	public static final String ON = "On";
 	public static final String GATEWAY = "Gateway";
@@ -35,7 +36,7 @@ public class VaddioNanoConstant {
 	public static final String IP_RTSP_URL = "IPRTSPPath";
 	public static final String IP_STREAMING_ENABLED = "IPStreaming";
 	public static final String IP_VIDEO_QUALITY = "IPVideoQuality";
-	public static final String HID_AUDIO_CONTROLS_ENABLED = "HIDAudioControlsEnabled";
+	public static final String HID_AUDIO_CONTROLS_ENABLED = "HIDAudioControls";
 	public static final String USB_ACTIVE = "USBActive";
 	public static final String USB_DEVICE = "USBDeviceName";
 	public static final String USB_ENUMERATION_SPEED = "USBEnumerationSpeed";
@@ -45,6 +46,7 @@ public class VaddioNanoConstant {
 	public static final String USB_STREAM_MODE = "USB streaming mode";
 	public static final String IP_STREAM_MODE = "IP streaming mode";
 	public static final String STREAM_MODE = "StreamingMode";
+	public static final String AUDIO_MUTE = "AudioMute";
 	public static final String HASH = "#";
 	public static final String MUTE = "Mute";
 	public static final String CROSSPOINT_GAIN = "CrosspointGain";

@@ -17,11 +17,13 @@ public enum VaddioCommand {
 	NETWORK_INFO("NetworkSettings", "network settings get"),
 	VERSION("SystemVersion", "version"),
 	VIDEO_MUTE("VideoMute", "video mute get"),
+	AUDIO_MUTE("AudioMute", "audio master mute get"),
 	STREAM_SETTINGS("StreamingSettings", "streaming settings get"),
 	;
 	public static final String STREAMING_MODE = "streaming mode set ";
 	public static final String SYSTEM_REBOOT = "system reboot";
 	public static final String VIDEO_COMMAND = "video mute ";
+	public static final String AUDIO_COMMAND = "audio master mute ";
 
 	/**
 	 * VaddioCommand

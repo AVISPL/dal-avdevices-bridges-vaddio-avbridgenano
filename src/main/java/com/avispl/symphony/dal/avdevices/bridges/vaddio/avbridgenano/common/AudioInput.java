@@ -78,9 +78,9 @@ public enum AudioInput {
 					return audioInputEnum.getValue();
 				}
 			}
-			return null;
+			return VaddioNanoConstant.EMPTY;
 		} catch (Exception e) {
-			return null;
+			return VaddioNanoConstant.EMPTY;
 		}
 	}
 }

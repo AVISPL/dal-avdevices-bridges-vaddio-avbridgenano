@@ -25,16 +25,16 @@ public class EnumTypeHandler {
 		try {
 			for (T metric : enumType.getEnumConstants()) {
 				Method methodName = metric.getClass().getMethod("getName");
-				String nameMetric = (String) methodName.invoke(metric); // getName executed
+				String nameMetric = (String) methodName.invoke(metric);
 				if (name.equalsIgnoreCase(nameMetric)) {
 					Method methodValue = metric.getClass().getMethod("getCommand");
 					return methodValue.invoke(metric).toString();
 				}
 			}
+			return VaddioNanoConstant.EMPTY;
 		} catch (Exception e) {
-			return null;
+			return VaddioNanoConstant.EMPTY;
 		}
-		return null;
 	}
 
 	/**
@@ -48,15 +48,15 @@ public class EnumTypeHandler {
 		try {
 			for (T metric : enumType.getEnumConstants()) {
 				Method methodValue = metric.getClass().getMethod("getValue");
-				String valueMetric = methodValue.invoke(metric).toString(); // getName executed
+				String valueMetric = methodValue.invoke(metric).toString();
 				if (value.equals(valueMetric)) {
 					Method methodName = metric.getClass().getMethod("getName");
 					return methodName.invoke(metric).toString();
 				}
 			}
+			return VaddioNanoConstant.EMPTY;
 		} catch (Exception e) {
-			return null;
+			return VaddioNanoConstant.EMPTY;
 		}
-		return null;
 	}
 }
