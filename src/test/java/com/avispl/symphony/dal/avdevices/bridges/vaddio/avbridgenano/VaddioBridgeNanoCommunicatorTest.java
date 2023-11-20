@@ -43,15 +43,29 @@ public class VaddioBridgeNanoCommunicatorTest {
 	}
 
 	/**
+	 * Test default config management
+	 *
+	 * Expect default config management successfully
+	 */
+	@Test
+	void testDefaultManagement() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("false");
+		ExtendedStatistics extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
+		Map<String, String> stats = extendedStatistics.getStatistics();
+		Assertions.assertEquals(25,stats.size());
+	}
+
+	/**
 	 * Test version for adapter
 	 *
 	 * Expect verify version for audio and system successfully
 	 */
 	@Test
 	void testPollingInterval() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistics.getStatistics();
-		Assertions.assertEquals(0, stats.size());
+		Assertions.assertNull(stats.size());
 		extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
 		stats = extendedStatistics.getStatistics();
 		Assertions.assertEquals(168, stats.size());
@@ -64,8 +78,10 @@ public class VaddioBridgeNanoCommunicatorTest {
 	 */
 	@Test
 	void testVersion() throws Exception {
-		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
+
+		extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistics.getStatistics();
 		Assertions.assertEquals("AV Bridge Nano 1.0.1", stats.get("SystemVersion"));
 		Assertions.assertEquals("1.02", stats.get("AudioVersion"));
@@ -78,6 +94,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 	 */
 	@Test
 	void testNetworkSettings() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistics.getStatistics();
@@ -96,6 +113,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 	 */
 	@Test
 	void testStreamingSettingsWithUSBStreaming() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
@@ -109,7 +127,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistics.getStatistics();
 		String group = "StreamingSettings#";
-		Assertions.assertEquals("false", stats.get(group + "HIDAudioControlsEnabled"));
+		Assertions.assertEquals("Enabled", stats.get(group + "HIDAudioControls"));
 		Assertions.assertEquals("AV Bridge Nano", stats.get(group + "USBDeviceName"));
 	}
 
@@ -119,6 +137,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 	 */
 	@Test
 	void testStreamingSettingsWithIPStreamingCustom() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
@@ -128,8 +147,8 @@ public class VaddioBridgeNanoCommunicatorTest {
 		controllableProperty.setProperty(key);
 		vaddioBridgeNanoCommunicator.controlProperty(controllableProperty);
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
-		extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistics.getStatistics();
 		String group = "StreamingSettings#";
 		Assertions.assertEquals("360p", stats.get(group + "IPPresetResolution"));
@@ -151,6 +170,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 	 */
 	@Test
 	void testStreamingSettingsWithIPStreamingWithIPStreamingPort() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
@@ -184,6 +204,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 	 */
 	@Test
 	void testStreamingSettingsWithIPStreamingWithCustom() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
@@ -198,7 +219,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 		Map<String, String> stats = extendedStatistics.getStatistics();
 		String group = "StreamingSettings#";
 		Assertions.assertNull(stats.get(group + "IPPresetResolution"));
-		Assertions.assertEquals("true", stats.get(group + "IPStreaming"));
+		Assertions.assertEquals("Enabled", stats.get(group + "IPStreaming"));
 		Assertions.assertEquals("RTSP", stats.get(group + "IPProtocol"));
 		Assertions.assertEquals("Custom", stats.get(group + "IPVideoQuality"));
 		Assertions.assertEquals("1400", stats.get(group + "IPRTSPMTU(bytes)"));
@@ -217,6 +238,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 	 */
 	@Test
 	void testVideoMute() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
@@ -240,6 +262,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 	 */
 	@Test
 	void testAudioInputMuteOFF() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
@@ -263,6 +286,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 	 */
 	@Test
 	void testAudioInputMuteON() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
@@ -286,6 +310,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 	 */
 	@Test
 	void testAudioInputVolume() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();
@@ -302,6 +327,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 		Assertions.assertEquals("-1.0", currentValue);
 		Assertions.assertEquals("-1", extendedStatistics.getStatistics().get("LineInLeft#VolumeCurrentValue(dB)"));
 	}
+
 	/**
 	 * Test Control volume
 	 *
@@ -309,6 +335,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 	 */
 	@Test
 	void testCrosspointGainHDMIOutLeft() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		vaddioBridgeNanoCommunicator.getMultipleStatistics();
 		ControllableProperty controllableProperty = new ControllableProperty();

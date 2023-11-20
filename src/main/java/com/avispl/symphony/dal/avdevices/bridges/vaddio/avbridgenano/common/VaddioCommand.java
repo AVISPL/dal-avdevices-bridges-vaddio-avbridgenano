@@ -13,12 +13,12 @@ package com.avispl.symphony.dal.avdevices.bridges.vaddio.avbridgenano.common;
  */
 public enum VaddioCommand {
 
-	STREAM_MODE("StreamingMode", "streaming mode get"),
-	NETWORK_INFO("NetworkSettings", "network settings get"),
-	VERSION("SystemVersion", "version"),
-	VIDEO_MUTE("VideoMute", "video mute get"),
-	AUDIO_MUTE("AudioMute", "audio master mute get"),
-	STREAM_SETTINGS("StreamingSettings", "streaming settings get"),
+	STREAM_MODE("StreamingMode", "streaming mode get", true),
+	NETWORK_INFO("NetworkSettings", "network settings get", true),
+	VERSION("SystemVersion", "version", true),
+	VIDEO_MUTE("VideoMute", "video mute get", false),
+	AUDIO_MUTE("AudioMute", "audio master mute get", false),
+	STREAM_SETTINGS("StreamingSettings", "streaming settings get", true),
 	;
 	public static final String STREAMING_MODE = "streaming mode set ";
 	public static final String SYSTEM_REBOOT = "system reboot";
@@ -31,13 +31,15 @@ public enum VaddioCommand {
 	 * @name name of {@link #name}
 	 * @command command of {@link #command}
 	 */
-	VaddioCommand(String name, String command) {
+	VaddioCommand(String name, String command, boolean isMonitoring) {
 		this.name = name;
 		this.command = command;
+		this.isMonitoring = isMonitoring;
 	}
 
 	private String name;
 	private String command;
+	private boolean isMonitoring;
 
 	/**
 	 * Retrieves {@link #name}
@@ -55,5 +57,14 @@ public enum VaddioCommand {
 	 */
 	public String getCommand() {
 		return command;
+	}
+
+	/**
+	 * Retrieves {@link #isMonitoring}
+	 *
+	 * @return value of {@link #isMonitoring}
+	 */
+	public boolean isMonitoring() {
+		return isMonitoring;
 	}
 }
