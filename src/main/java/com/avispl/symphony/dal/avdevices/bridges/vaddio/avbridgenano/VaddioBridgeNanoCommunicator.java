@@ -3,6 +3,10 @@
  */
 package com.avispl.symphony.dal.avdevices.bridges.vaddio.avbridgenano;
 
+import java.net.ConnectException;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -126,6 +130,52 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		this.setCommandSuccessList(Collections.singletonList("> "));
 		this.setLoginSuccessList(Collections.singletonList("********************************************\r\n        \r\nWelcome admin\r\n> "));
 		this.setLoginErrorList(Collections.singletonList("Permission denied, please try again."));
+	}
+
+	/**
+	 * {@inheritDoc}
+	 * <p>
+	 *
+	 * Check for available devices before retrieving the value
+	 * ping latency information to Symphony
+	 */
+	@Override
+	public int ping() throws Exception {
+		if (isInitialized()) {
+			long pingResultTotal = 0L;
+
+			for (int i = 0; i < this.getPingAttempts(); i++) {
+				long startTime = System.currentTimeMillis();
+
+				try (Socket puSocketConnection = new Socket(this.host, this.getPort())) {
+					puSocketConnection.setSoTimeout(this.getPingTimeout());
+					if (puSocketConnection.isConnected()) {
+						long pingResult = System.currentTimeMillis() - startTime;
+						pingResultTotal += pingResult;
+						if (this.logger.isTraceEnabled()) {
+							this.logger.trace(String.format("PING OK: Attempt #%s to connect to %s on port %s succeeded in %s ms", i + 1, host, this.getPort(), pingResult));
+						}
+					} else {
+						if (this.logger.isDebugEnabled()) {
+							logger.debug(String.format("PING DISCONNECTED: Connection to %s did not succeed within the timeout period of %sms", host, this.getPingTimeout()));
+						}
+						return this.getPingTimeout();
+					}
+				} catch (SocketTimeoutException | ConnectException tex) {
+					throw new SocketTimeoutException("Socket connection timed out");
+				} catch (UnknownHostException tex) {
+					throw new SocketTimeoutException("Socket connection timed out" + tex.getMessage());
+				} catch (Exception e) {
+					if (this.logger.isWarnEnabled()) {
+						this.logger.warn(String.format("PING TIMEOUT: Connection to %s did not succeed, UNKNOWN ERROR %s: ", host, e.getMessage()));
+					}
+					return this.getPingTimeout();
+				}
+			}
+			return Math.max(1, Math.toIntExact(pingResultTotal / this.getPingAttempts()));
+		} else {
+			throw new IllegalStateException("Cannot use device class without calling init() first");
+		}
 	}
 
 	/**
@@ -339,6 +389,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 					.filter(entry -> entry.getKey().startsWith(VaddioNanoConstant.CROSSPOINT_GAIN))
 					.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 		}
+		stats.putAll(controlStats);
 		newAdvancedControllableProperty.removeIf(item -> advancedControllableProperty.stream().anyMatch(it -> it.getName().equals(item.getName())));
 		stats.putAll(newStats);
 		newAdvancedControllableProperty.addAll(advancedControllableProperty);
@@ -408,7 +459,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	}
 
 	/**
-	 * Control StreamingMode
+	 * Control SystemReboot
 	 *
 	 * @param groupName the groupName is name of command
 	 * @param isRebootTime is boolean type (true/false) if reboot time delay
@@ -530,7 +581,8 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 					data = extractResponseValue(data, VaddioNanoConstant.VOLUME_REGEX).split(VaddioNanoConstant.SPACE)[0];
 					populateVolumeControl(controlStats, advancedControllableProperty, command.getName(), key, data);
 					key = command.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.MUTE;
-					String muteValue = StringUtils.isNullOrEmpty(cacheKeyAndValue.get(key)) ? VaddioNanoConstant.NONE : cacheKeyAndValue.get(key);
+					String audioKey = VaddioCommand.AUDIO_MUTE.getName();
+					String muteValue = StringUtils.isNullOrEmpty(cacheKeyAndValue.get(audioKey)) ? VaddioNanoConstant.NONE : cacheKeyAndValue.get(audioKey);
 					if (VaddioNanoConstant.ON.equalsIgnoreCase(extractResponseValue(muteValue, VaddioNanoConstant.MUTE_REGEX))) {
 						controlStats.put(key, VaddioNanoConstant.ON);
 						String finalKey = key;
@@ -669,8 +721,8 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 			controlStats.put(VaddioNanoConstant.SYSTEM_REBOOT, VaddioNanoConstant.EMPTY);
 			advancedControllableProperty.add(createButton(VaddioNanoConstant.SYSTEM_REBOOT, VaddioNanoConstant.REBOOT, VaddioNanoConstant.REBOOTING, 0L));
 
-			controlStats.put(VaddioNanoConstant.SYSTEM_REBOOT_DELAY, VaddioNanoConstant.EMPTY);
-			AdvancedControllableProperty systemRebootDelay = createNumeric(VaddioNanoConstant.SYSTEM_REBOOT_DELAY, "30");
+			controlStats.put(VaddioNanoConstant.SYSTEM_REBOOT_DELAY, VaddioNanoConstant.DEFAULT_REBOOT);
+			AdvancedControllableProperty systemRebootDelay = createNumeric(VaddioNanoConstant.SYSTEM_REBOOT_DELAY, VaddioNanoConstant.DEFAULT_REBOOT);
 			advancedControllableProperty.add(systemRebootDelay);
 		}
 	}

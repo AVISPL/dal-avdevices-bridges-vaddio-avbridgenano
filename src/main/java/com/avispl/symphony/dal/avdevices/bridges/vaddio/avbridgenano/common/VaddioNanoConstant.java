@@ -55,6 +55,7 @@ public class VaddioNanoConstant {
 	public static final String VOLUME_REGEX = "volume:(.*?)\r\n";
 	public static final String MUTE_REGEX = "mute:(.*?)\r\n";
 	public static final String EMPTY = "";
+	public static final String DEFAULT_REBOOT = "30";
 	public static final String SPACE = " ";
 	public static final String SYSTEM_REBOOT = "SystemReboot";
 	public static final String SYSTEM_REBOOT_DELAY = "SystemRebootDelay(s)";
