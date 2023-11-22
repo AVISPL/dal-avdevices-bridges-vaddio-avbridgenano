@@ -22,6 +22,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.util.CollectionUtils;
 
+import com.jcraft.jsch.JSchException;
 import javax.security.auth.login.FailedLoginException;
 
 import com.avispl.symphony.api.dal.control.Controller;
@@ -98,10 +99,18 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	private String configManagement;
 
 	/**
-	 * configManagement in boolean value
+	 * isConfigManagement to check if true accept all controllable properties, of false accept monitoring only
 	 */
 	private boolean isConfigManagement;
+
+	/**
+	 * isEmergencyDelivery to check if control flow is trigger
+	 */
 	private boolean isEmergencyDelivery;
+
+	/**
+	 * isNextPollingInterval to check next PollingInterval to retrieve crosspoint gain of the device
+	 */
 	private boolean isNextPollingInterval;
 
 	/**
@@ -128,7 +137,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	public VaddioBridgeNanoCommunicator() {
 		this.setCommandErrorList(Collections.singletonList("Error: response error"));
 		this.setCommandSuccessList(Collections.singletonList("> "));
-		this.setLoginSuccessList(Collections.singletonList("********************************************\r\n        \r\nWelcome admin\r\n> "));
+		this.setLoginSuccessList(Collections.singletonList("> "));
 		this.setLoginErrorList(Collections.singletonList("Permission denied, please try again."));
 	}
 
@@ -227,7 +236,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 			try {
 				controlProperty(p);
 			} catch (Exception e) {
-				e.printStackTrace();
+				logger.error(String.format("Error when control property %s", p.getProperty()), e);
 			}
 		}
 	}
@@ -240,7 +249,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		reentrantLock.lock();
 		try {
 			this.timeout = controlSSHTimeout;
-			if (localExtendedStatistics == null || localExtendedStatistics.getStatistics().isEmpty()) {
+			if (localExtendedStatistics == null || localExtendedStatistics.getStatistics() == null) {
 				return;
 			}
 			isEmergencyDelivery = true;
@@ -305,13 +314,24 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 						streamMode = VaddioNanoConstant.IP;
 					}
 					String streamingModeCommand = VaddioCommand.STREAMING_MODE;
-					sendCommandToControlDevice(streamingModeCommand, streamMode, groupName);
+					sendCommandToControlStreamingMode(streamingModeCommand, streamMode, groupName);
+					sendCommandDetails(VaddioCommand.STREAM_MODE.getCommand(), VaddioCommand.STREAM_MODE.getName());
+					sendCommandDetails(VaddioCommand.STREAM_SETTINGS.getCommand(), VaddioCommand.STREAM_SETTINGS.getName());
+					String data =
+							StringUtils.isNullOrEmpty(cacheKeyAndValue.get(VaddioCommand.STREAM_SETTINGS.getName())) ? VaddioNanoConstant.NONE : cacheKeyAndValue.get(VaddioCommand.STREAM_SETTINGS.getName());
+					Map<String, String> newStats = stats.entrySet().stream()
+							.filter(entry -> !entry.getKey().startsWith(VaddioNanoConstant.STREAMING_SETTINGS))
+							.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+					populateStreamingSettings(data, newStats);
+					stats.clear();
+					stats.putAll(newStats);
 					break;
 				case SYSTEM_REBOOT:
-					controlSystemReboot(groupName, value, true);
+					controlSystemReboot(groupName, value, false);
 					break;
 				case SYSTEM_REBOOT_DELAY:
-					controlSystemReboot(groupName, value, false);
+					Long time = checkValidInput(VaddioNanoConstant.MIN_REBOOT, VaddioNanoConstant.MAX_REBOOT, value);
+					controlSystemReboot(groupName, String.valueOf(time), true);
 					break;
 				default:
 					logger.debug("the property doesn't support" + keyName);
@@ -339,6 +359,36 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	}
 
 	/**
+	 * Checks if the input value is valid and converts it to an integer.
+	 *
+	 * @param value The input value to be checked and converted to an integer.
+	 * @param min is the minimum value
+	 * @param max is the maximum value
+	 * @return The converted integer value if the input is valid.
+	 * @throws IllegalArgumentException if the input value is not a valid integer.
+	 */
+	private long checkValidInput(int min, int max, String value) {
+		if (value.contains(VaddioNanoConstant.DOT)) {
+			value = value.split(VaddioNanoConstant.DOT_REGEX)[0];
+		}
+		long initial = min;
+		try {
+			long valueCompare = Long.parseLong(value);
+			if (min <= valueCompare && valueCompare <= max) {
+				return valueCompare;
+			}
+			if (valueCompare > max) {
+				initial = max;
+			}
+		} catch (Exception e) {
+			if (!value.contains(VaddioNanoConstant.DASH)) {
+				initial = max;
+			}
+		}
+		return initial;
+	}
+
+	/**
 	 * Update Master mute control
 	 *
 	 * @param stats the stats are list of Statistics
@@ -350,13 +400,14 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		for (AudioCrosspoint audioCrosspoint : AudioCrosspoint.values()) {
 			String key = audioCrosspoint.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.MUTE;
 			if (VaddioNanoConstant.ON.equalsIgnoreCase(muteValue)) {
+				stats.remove(key);
 				stats.put(key, VaddioNanoConstant.ON);
 				advancedControllableProperties.removeIf(item -> item.getName().equalsIgnoreCase(key));
 				continue;
 			}
 			String group = audioCrosspoint.getName() + VaddioNanoConstant.HASH;
 			String commandItem = audioCrosspoint.getCommand();
-			sendCommandDetails(commandItem + VaddioNanoConstant.VOLUME_COMMAND, group + VaddioNanoConstant.VOLUME);
+			sendCommandDetails((commandItem + VaddioNanoConstant.SPACE + VaddioNanoConstant.MUTE + VaddioNanoConstant.GET).toLowerCase(Locale.ROOT), group + VaddioNanoConstant.MUTE);
 			populateMuteControl(stats, advancedControllableProperties, audioCrosspoint.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.MUTE);
 		}
 	}
@@ -416,9 +467,9 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		String keyName = group[1].replace(VaddioNanoConstant.GAIN, VaddioNanoConstant.EMPTY);
 		String command =
 				EnumTypeHandler.getCommandByValue(AudioCrosspoint.class, groupName) + VaddioNanoConstant.GAIN_COMMAND + AudioInput.getValueByName(keyName) + VaddioNanoConstant.SET;
-		sendCommandToControlDevice(command, value, group[1]);
+		sendCommandToControlDevice(command, String.valueOf((int) Float.parseFloat(value)), group[1]);
 		updateLocalControlValue(stats, advancedControllableProperties, property, value);
-		stats.put(group[0] + VaddioNanoConstant.HASH + keyName + VaddioNanoConstant.GAIN_CURRENT_VALUE, value);
+		stats.put(group[0] + VaddioNanoConstant.HASH + keyName + VaddioNanoConstant.GAIN_CURRENT_VALUE, String.valueOf((int) Float.parseFloat(value)));
 		return true;
 	}
 
@@ -459,6 +510,27 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	}
 
 	/**
+	 * Send command to control Streaming Mode by value
+	 *
+	 * @param command the command is command to send to the device
+	 * @param value the value is value of the command
+	 * @param name the name is group name
+	 */
+	private void sendCommandToControlStreamingMode(String command, String value, String name) {
+		try {
+			sendCommandToControlDevice(command, value, name);
+		} catch (Exception e) {
+			try {
+				Thread.sleep(500);
+			} catch (InterruptedException ex) {
+				ex.printStackTrace();
+			}
+			//retry again if get the first error
+			sendCommandToControlDevice(command, value, name);
+		}
+	}
+
+	/**
 	 * Control SystemReboot
 	 *
 	 * @param groupName the groupName is name of command
@@ -471,9 +543,14 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 				command = command + VaddioNanoConstant.SPACE + value;
 			}
 			String response = send(command.contains("\r") ? command : command.concat("\r"));
-			if (StringUtils.isNullOrEmpty(response) || response.contains(VaddioNanoConstant.ERROR_RESPONSE)) {
-				throw new IllegalArgumentException(String.format("Error when control streaming mode, Syntax error command: %s", response));
+			if (StringUtils.isNullOrEmpty(response) || response.contains(VaddioNanoConstant.ERROR_RESPONSE) || !response.contains(VaddioNanoConstant.OK)) {
+				throw new IllegalArgumentException(String.format("Error when control reboot device, Syntax error command: %s", response));
 			}
+		} catch (JSchException js) {
+			if (!isRebootTime && VaddioNanoConstant.REBOOT_MESSAGE.equalsIgnoreCase(js.getMessage())) {
+				return;
+			}
+			throw new IllegalArgumentException(String.format("Can't control %s.", groupName), js);
 		} catch (Exception e) {
 			throw new IllegalArgumentException(String.format("Can't control %s with %s value.", groupName, value), e);
 		}

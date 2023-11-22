@@ -89,4 +89,10 @@ public class VaddioNanoConstant {
 	public static final String MAX_VOLUME = "6";
 	public static final String MIN_GAIN = "-12";
 	public static final String MAX_GAIN = "12";
+	public static final String DOT = ".";
+	public static final String DOT_REGEX = "\\.";
+	public static final String DASH = "-";
+	public static final String REBOOT_MESSAGE = "timeout: socket is not established";
+	public static final int MIN_REBOOT = 0;
+	public static final int MAX_REBOOT = 60;
 }
