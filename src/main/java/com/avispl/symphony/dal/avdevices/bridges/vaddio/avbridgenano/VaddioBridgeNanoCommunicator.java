@@ -992,18 +992,6 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	}
 
 	/**
-	 * Retrieve monitoring Data With Default ConfigManagement
-	 *
-	 * @throws FailedLoginException if get the FailedLoginException
-	 */
-	private void retrieveMonitoringDataWithDefaultConfigManagement() throws FailedLoginException {
-		for (AudioCrosspoint command : AudioCrosspoint.values()) {
-			sendCommandDetails(command.getCommand() + VaddioNanoConstant.ROUTES_COMMAND,
-					VaddioNanoConstant.CROSSPOINT_GAIN + command.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.ENABLED_ROUTES);
-		}
-	}
-
-	/**
 	 * Send command detail to get the data from device
 	 *
 	 * @param command the command is command to get data
