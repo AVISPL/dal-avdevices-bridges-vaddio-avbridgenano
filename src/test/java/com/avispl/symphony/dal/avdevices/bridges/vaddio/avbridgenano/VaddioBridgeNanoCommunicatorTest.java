@@ -3,6 +3,7 @@
  */
 package com.avispl.symphony.dal.avdevices.bridges.vaddio.avbridgenano;
 
+import java.net.SocketTimeoutException;
 import java.util.List;
 import java.util.Map;
 
@@ -52,7 +53,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 		vaddioBridgeNanoCommunicator.setConfigManagement("false");
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistics.getStatistics();
-		Assertions.assertEquals(25,stats.size());
+		Assertions.assertEquals(25, stats.size());
 	}
 
 	/**
@@ -351,5 +352,72 @@ public class VaddioBridgeNanoCommunicatorTest {
 		String currentValue = String.valueOf(advancedControllableProperty.stream().filter(item -> item.getName().equals(key)).findFirst().get().getValue());
 		Assertions.assertEquals("-1.0", currentValue);
 		Assertions.assertEquals("-1", extendedStatistics.getStatistics().get("CrosspointGainHDMIOutLeft#HDMIInLeftGainCurrentValue(dB)"));
+	}
+
+	/**
+	 * Test Control route on
+	 *
+	 * Expect control route on successfully
+	 */
+	@Test
+	void testCrosspointHDMIOutLeftRouteON() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
+		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		ControllableProperty controllableProperty = new ControllableProperty();
+		String key = "CrosspointHDMIOutLeft#HDMIInLeftRoute";
+		String value = "1";
+		controllableProperty.setValue(value);
+		controllableProperty.setProperty(key);
+		vaddioBridgeNanoCommunicator.controlProperty(controllableProperty);
+		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		ExtendedStatistics extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
+		List<AdvancedControllableProperty> advancedControllableProperty = extendedStatistics.getControllableProperties();
+		String currentValue = String.valueOf(advancedControllableProperty.stream().filter(item -> item.getName().equals(key)).findFirst().get().getValue());
+		Assertions.assertEquals("1", currentValue);
+	}
+
+	/**
+	 * Test Control route off
+	 *
+	 * Expect control route off successfully
+	 */
+	@Test
+	void testCrosspointHDMIOutLeftRouteOFF() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
+		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		ControllableProperty controllableProperty = new ControllableProperty();
+		String key = "CrosspointHDMIOutLeft#HDMIInLeftRoute";
+		String value = "0";
+		controllableProperty.setValue(value);
+		controllableProperty.setProperty(key);
+		vaddioBridgeNanoCommunicator.controlProperty(controllableProperty);
+		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		ExtendedStatistics extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
+		List<AdvancedControllableProperty> advancedControllableProperty = extendedStatistics.getControllableProperties();
+		String currentValue = String.valueOf(advancedControllableProperty.stream().filter(item -> item.getName().equals(key)).findFirst().get().getValue());
+		Assertions.assertEquals("0", currentValue);
+	}
+
+	/**
+	 * Test Reboot Control
+	 *
+	 * Expect device reboot successfully
+	 */
+	@Test
+	void testReboot() throws Exception {
+		vaddioBridgeNanoCommunicator.setConfigManagement("true");
+		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		vaddioBridgeNanoCommunicator.getMultipleStatistics();
+		ControllableProperty controllableProperty = new ControllableProperty();
+		String key = "SystemReboot";
+		String value = "1";
+		controllableProperty.setValue(value);
+		controllableProperty.setProperty(key);
+		vaddioBridgeNanoCommunicator.controlProperty(controllableProperty);
+		Assertions.assertThrows(SocketTimeoutException.class, () -> vaddioBridgeNanoCommunicator.getMultipleStatistics(), "Expect timeout exception, due to the device already rebootin");
 	}
 }

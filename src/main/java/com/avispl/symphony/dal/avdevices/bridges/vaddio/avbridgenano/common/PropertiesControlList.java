@@ -17,7 +17,6 @@ public enum PropertiesControlList {
 	VOLUME(VaddioNanoConstant.VOLUME),
 	VIDEO_MUTE(VaddioNanoConstant.VIDEO_MUTE),
 	SYSTEM_REBOOT(VaddioNanoConstant.SYSTEM_REBOOT),
-	SYSTEM_REBOOT_DELAY(VaddioNanoConstant.SYSTEM_REBOOT_DELAY),
 	STREAM_MODE(VaddioNanoConstant.STREAM_MODE),
 	AUDIO_MUTE(VaddioNanoConstant.AUDIO_MUTE);
 

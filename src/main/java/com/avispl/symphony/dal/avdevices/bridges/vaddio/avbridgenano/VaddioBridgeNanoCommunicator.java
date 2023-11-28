@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.util.CollectionUtils;
 
-import com.jcraft.jsch.JSchException;
 import javax.security.auth.login.FailedLoginException;
 
 import com.avispl.symphony.api.dal.control.Controller;
@@ -136,7 +135,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	 */
 	public VaddioBridgeNanoCommunicator() {
 		this.setCommandErrorList(Collections.singletonList("Error: response error"));
-		this.setCommandSuccessList(Collections.singletonList("> "));
+		this.setCommandSuccessList(Arrays.asList("> ", "NOW!\r\r\n"));
 		this.setLoginSuccessList(Collections.singletonList("> "));
 		this.setLoginErrorList(Collections.singletonList("Permission denied, please try again."));
 	}
@@ -204,7 +203,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 				if (localExtendedStatistics != null && localExtendedStatistics.getStatistics() == null && !isNextPollingInterval || !isConfigManagement) {
 					populateMonitoringAndControlling(stats, controlStats, advancedControllableProperty);
 					populateAudioInput(controlStats, advancedControllableProperty);
-					populateOutputControl(controlStats, advancedControllableProperty);
+					populateOutputControl(controlStats, advancedControllableProperty, new ArrayList<>());
 					populateCrosspointGain(stats, controlStats, advancedControllableProperty);
 					if (isConfigManagement) {
 						stats.putAll(controlStats);
@@ -320,18 +319,15 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 					String data =
 							StringUtils.isNullOrEmpty(cacheKeyAndValue.get(VaddioCommand.STREAM_SETTINGS.getName())) ? VaddioNanoConstant.NONE : cacheKeyAndValue.get(VaddioCommand.STREAM_SETTINGS.getName());
 					Map<String, String> newStats = stats.entrySet().stream()
-							.filter(entry -> !entry.getKey().startsWith(VaddioNanoConstant.STREAMING_SETTINGS))
+							.filter(entry -> !entry.getKey().startsWith(VaddioNanoConstant.STREAMING_IP) && !entry.getKey().startsWith(VaddioNanoConstant.STREAMING_USP))
 							.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 					populateStreamingSettings(data, newStats);
 					stats.clear();
 					stats.putAll(newStats);
 					break;
 				case SYSTEM_REBOOT:
-					controlSystemReboot(groupName, value, false);
-					break;
-				case SYSTEM_REBOOT_DELAY:
-					Long time = checkValidInput(VaddioNanoConstant.MIN_REBOOT, VaddioNanoConstant.MAX_REBOOT, value);
-					controlSystemReboot(groupName, String.valueOf(time), true);
+					controlSystemReboot(groupName, value);
+					Thread.sleep(3000);
 					break;
 				default:
 					logger.debug("the property doesn't support" + keyName);
@@ -356,36 +352,6 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		cacheKeyAndValue.clear();
 
 		super.internalDestroy();
-	}
-
-	/**
-	 * Checks if the input value is valid and converts it to an integer.
-	 *
-	 * @param value The input value to be checked and converted to an integer.
-	 * @param min is the minimum value
-	 * @param max is the maximum value
-	 * @return The converted integer value if the input is valid.
-	 * @throws IllegalArgumentException if the input value is not a valid integer.
-	 */
-	private long checkValidInput(int min, int max, String value) {
-		if (value.contains(VaddioNanoConstant.DOT)) {
-			value = value.split(VaddioNanoConstant.DOT_REGEX)[0];
-		}
-		long initial = min;
-		try {
-			long valueCompare = Long.parseLong(value);
-			if (min <= valueCompare && valueCompare <= max) {
-				return valueCompare;
-			}
-			if (valueCompare > max) {
-				initial = max;
-			}
-		} catch (Exception e) {
-			if (!value.contains(VaddioNanoConstant.DASH)) {
-				initial = max;
-			}
-		}
-		return initial;
 	}
 
 	/**
@@ -435,7 +401,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		} else {
 			populateMonitoringAndControlling(stats, controlStats, advancedControllableProperty);
 			populateAudioInput(stats, advancedControllableProperty);
-			populateOutputControl(stats, advancedControllableProperty);
+			populateOutputControl(stats, advancedControllableProperty, newAdvancedControllableProperty);
 			newStats = newStats.entrySet().stream()
 					.filter(entry -> entry.getKey().startsWith(VaddioNanoConstant.CROSSPOINT_GAIN))
 					.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
@@ -457,7 +423,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	 * @param property the property  is name of command
 	 * @return boolean (true/false)
 	 */
-	private boolean handleCrosspointGainControl(Map<String, String> stats, List<AdvancedControllableProperty> advancedControllableProperties, String value, String property) {
+	private boolean handleCrosspointGainControl(Map<String, String> stats, List<AdvancedControllableProperty> advancedControllableProperties, String value, String property) throws FailedLoginException {
 		if (!property.contains(VaddioNanoConstant.CROSSPOINT_GAIN)) {
 			return false;
 		}
@@ -465,11 +431,30 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		String[] group = property.split(VaddioNanoConstant.HASH);
 		String groupName = group[0].replace(VaddioNanoConstant.CROSSPOINT_GAIN, VaddioNanoConstant.EMPTY);
 		String keyName = group[1].replace(VaddioNanoConstant.GAIN, VaddioNanoConstant.EMPTY);
-		String command =
-				EnumTypeHandler.getCommandByValue(AudioCrosspoint.class, groupName) + VaddioNanoConstant.GAIN_COMMAND + AudioInput.getValueByName(keyName) + VaddioNanoConstant.SET;
-		sendCommandToControlDevice(command, String.valueOf((int) Float.parseFloat(value)), group[1]);
+
+		if (keyName.contains(VaddioNanoConstant.ROUTES)) {
+			keyName = group[1].replace(VaddioNanoConstant.ROUTES, VaddioNanoConstant.EMPTY);
+			sendCommandDetails(EnumTypeHandler.getCommandByValue(AudioCrosspoint.class, groupName) + VaddioNanoConstant.ROUTES_COMMAND,
+					VaddioNanoConstant.CROSSPOINT_GAIN + groupName + VaddioNanoConstant.HASH + VaddioNanoConstant.ENABLED_ROUTES);
+
+			String key = VaddioNanoConstant.CROSSPOINT_GAIN + groupName + VaddioNanoConstant.HASH + VaddioNanoConstant.ENABLED_ROUTES;
+			String data = StringUtils.isNullOrEmpty(cacheKeyAndValue.get(key)) ? VaddioNanoConstant.NONE : cacheKeyAndValue.get(key);
+			data = parseResponseByCommandGain(data).replace("]", VaddioNanoConstant.EMPTY).trim();
+
+			String currentValue = AudioInput.getValueByName(keyName).trim();
+			if (String.valueOf(VaddioNanoConstant.NUMBER_ONE).equalsIgnoreCase(value) && !data.contains(currentValue)) {
+				data = data + (VaddioNanoConstant.SPACE + currentValue);
+			} else {
+				data = data.replace(currentValue, VaddioNanoConstant.EMPTY);
+			}
+			String command = EnumTypeHandler.getCommandByValue(AudioCrosspoint.class, groupName) + VaddioNanoConstant.ROUTES_CONTROL;
+			sendCommandToControlDevice(command, data.trim(), group[1]);
+		} else {
+			String command = EnumTypeHandler.getCommandByValue(AudioCrosspoint.class, groupName) + VaddioNanoConstant.GAIN_COMMAND + AudioInput.getValueByName(keyName) + VaddioNanoConstant.SET;
+			sendCommandToControlDevice(command, String.valueOf((int) Float.parseFloat(value)), group[1]);
+			stats.put(group[0] + VaddioNanoConstant.HASH + keyName + VaddioNanoConstant.GAIN_CURRENT_VALUE, String.valueOf((int) Float.parseFloat(value)));
+		}
 		updateLocalControlValue(stats, advancedControllableProperties, property, value);
-		stats.put(group[0] + VaddioNanoConstant.HASH + keyName + VaddioNanoConstant.GAIN_CURRENT_VALUE, String.valueOf((int) Float.parseFloat(value)));
 		return true;
 	}
 
@@ -501,11 +486,19 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		try {
 			command = (command.trim() + VaddioNanoConstant.SPACE + value).toLowerCase(Locale.ROOT);
 			String response = send(command.contains("\r") ? command : command.concat("\r"));
+
 			if (StringUtils.isNullOrEmpty(response) || response.contains(VaddioNanoConstant.ERROR_RESPONSE) || !response.contains(VaddioNanoConstant.OK)) {
+				if (response.contains(VaddioNanoConstant.ROUTE_MESSAGE)) {
+					throw new IllegalArgumentException("Error when controlling route invalid routing, the route is unavailable");
+				}
 				throw new IllegalArgumentException(String.format("Error when control %s, Syntax error command: %s", name, response));
 			}
 		} catch (Exception e) {
-			throw new IllegalArgumentException(String.format("Can't control %s with %s value.", name, value), e);
+			String message = String.format("Can't control %s with %s value.", name, value);
+			if (e.getMessage().contains(VaddioNanoConstant.ROUTE_MESSAGE)) {
+				message = e.getMessage();
+			}
+			throw new IllegalArgumentException(message, e);
 		}
 	}
 
@@ -522,8 +515,8 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		} catch (Exception e) {
 			try {
 				Thread.sleep(500);
-			} catch (InterruptedException ex) {
-				ex.printStackTrace();
+			} catch (Exception ex) {
+				logger.debug("Waiting to retry the Streaming mode control", ex);
 			}
 			//retry again if get the first error
 			sendCommandToControlDevice(command, value, name);
@@ -534,23 +527,14 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	 * Control SystemReboot
 	 *
 	 * @param groupName the groupName is name of command
-	 * @param isRebootTime is boolean type (true/false) if reboot time delay
 	 */
-	private void controlSystemReboot(String groupName, String value, boolean isRebootTime) {
+	private void controlSystemReboot(String groupName, String value) {
 		try {
 			String command = VaddioCommand.SYSTEM_REBOOT;
-			if (isRebootTime) {
-				command = command + VaddioNanoConstant.SPACE + value;
-			}
 			String response = send(command.contains("\r") ? command : command.concat("\r"));
 			if (StringUtils.isNullOrEmpty(response) || response.contains(VaddioNanoConstant.ERROR_RESPONSE) || !response.contains(VaddioNanoConstant.OK)) {
 				throw new IllegalArgumentException(String.format("Error when control reboot device, Syntax error command: %s", response));
 			}
-		} catch (JSchException js) {
-			if (!isRebootTime && VaddioNanoConstant.REBOOT_MESSAGE.equalsIgnoreCase(js.getMessage())) {
-				return;
-			}
-			throw new IllegalArgumentException(String.format("Can't control %s.", groupName), js);
 		} catch (Exception e) {
 			throw new IllegalArgumentException(String.format("Can't control %s with %s value.", groupName, value), e);
 		}
@@ -641,8 +625,10 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	 *
 	 * @param controlStats the controlStats are list of Statistics
 	 * @param advancedControllableProperty the advancedControllableProperty are AdvancedControllableProperty instance
+	 * @param advancedControllableProperty the advancedControllableProperty are AdvancedControllableProperty instance
 	 */
-	private void populateOutputControl(Map<String, String> controlStats, List<AdvancedControllableProperty> advancedControllableProperty) {
+	private void populateOutputControl(Map<String, String> controlStats, List<AdvancedControllableProperty> advancedControllableProperty,
+			List<AdvancedControllableProperty> newAdvancedControllableProperty) {
 		for (AudioCrosspoint command : AudioCrosspoint.values()) {
 			String key = command.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.VOLUME;
 			String data = StringUtils.isNullOrEmpty(cacheKeyAndValue.get(key)) ? VaddioNanoConstant.NONE : cacheKeyAndValue.get(key);
@@ -664,6 +650,9 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 						controlStats.put(key, VaddioNanoConstant.ON);
 						String finalKey = key;
 						advancedControllableProperty.removeIf(item -> item.getName().equalsIgnoreCase(finalKey));
+						if (!newAdvancedControllableProperty.isEmpty()) {
+							newAdvancedControllableProperty.removeIf(item -> item.getName().equalsIgnoreCase(finalKey));
+						}
 						break;
 					}
 					populateMuteControl(controlStats, advancedControllableProperty, key);
@@ -711,29 +700,41 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 									break;
 								}
 								populateGainControl(controlStats, advancedControllableProperty, key, crosspointGainCurrentKey, parseResponseByCommandGain(data));
+								populateRouteControl(stats, advancedControllableProperty, command, audioInputEnum);
 								break;
 							default:
 								break;
 						}
 					}
-					key = VaddioNanoConstant.CROSSPOINT_GAIN + command.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.ENABLED_ROUTES;
-					String data = StringUtils.isNullOrEmpty(cacheKeyAndValue.get(key)) ? VaddioNanoConstant.NONE : cacheKeyAndValue.get(key);
-					data = parseResponseByCommandGain(data).replace("]", VaddioNanoConstant.EMPTY);
-					if (StringUtils.isNullOrEmpty(data) || VaddioNanoConstant.NONE.equals(data)) {
-						stats.put(key, VaddioNanoConstant.NONE);
-						break;
-					}
-					List<String> itemList = Arrays.stream(data.split(VaddioNanoConstant.SPACE))
-							.map(audioValue -> EnumTypeHandler.getNameByValue(AudioInput.class, audioValue.trim()))
-							.collect(Collectors.toList());
-					String route = itemList.isEmpty() ? VaddioNanoConstant.NONE : String.join(", ", itemList);
-					stats.put(key, route);
 					break;
 				default:
 					logger.debug(String.format("the command %s doesn't support", command.getName()));
 					break;
 			}
 		}
+	}
+
+	/**
+	 * Populate Route for Matrix
+	 *
+	 * @param stats the stats are list of Statistics
+	 * @param advancedControllableProperty the advancedControllableProperty are AdvancedControllableProperty instance
+	 * @param audioCrosspoint the audioCrosspoint is AudioCrosspoint enum instance
+	 * @param audioInputEnum the audioInputEnum is AudioInputEnum instance
+	 */
+	private void populateRouteControl(Map<String, String> stats, List<AdvancedControllableProperty> advancedControllableProperty, AudioCrosspoint audioCrosspoint,
+			AudioInput audioInputEnum) {
+		String key = VaddioNanoConstant.CROSSPOINT_GAIN + audioCrosspoint.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.ENABLED_ROUTES;
+		String data = StringUtils.isNullOrEmpty(cacheKeyAndValue.get(key)) ? VaddioNanoConstant.NONE : cacheKeyAndValue.get(key);
+		data = parseResponseByCommandGain(data);
+		int routeValue = 0;
+		if (!StringUtils.isNullOrEmpty(data) && data.contains(audioInputEnum.getValue())) {
+			routeValue = 1;
+		}
+		String routeKey = VaddioNanoConstant.CROSSPOINT_GAIN + audioCrosspoint.getName() + VaddioNanoConstant.HASH + audioInputEnum.getPropertyName() + VaddioNanoConstant.ROUTES;
+		stats.put(routeKey, VaddioNanoConstant.EMPTY);
+		AdvancedControllableProperty routeControl = createSwitch(routeKey, routeValue, VaddioNanoConstant.OFF, VaddioNanoConstant.ON);
+		advancedControllableProperty.add(routeControl);
 	}
 
 	/**
@@ -797,10 +798,6 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 			}
 			controlStats.put(VaddioNanoConstant.SYSTEM_REBOOT, VaddioNanoConstant.EMPTY);
 			advancedControllableProperty.add(createButton(VaddioNanoConstant.SYSTEM_REBOOT, VaddioNanoConstant.REBOOT, VaddioNanoConstant.REBOOTING, 0L));
-
-			controlStats.put(VaddioNanoConstant.SYSTEM_REBOOT_DELAY, VaddioNanoConstant.DEFAULT_REBOOT);
-			AdvancedControllableProperty systemRebootDelay = createNumeric(VaddioNanoConstant.SYSTEM_REBOOT_DELAY, VaddioNanoConstant.DEFAULT_REBOOT);
-			advancedControllableProperty.add(systemRebootDelay);
 		}
 	}
 
@@ -814,8 +811,8 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		try {
 			boolean isIPStreaming = cacheKeyAndValue.get(VaddioCommand.STREAM_MODE.getName()).contains(VaddioNanoConstant.IP_STREAM_MODE);
 			for (StreamSettings streamSettings : StreamSettings.values()) {
-				String key = VaddioNanoConstant.STREAMING_SETTINGS + VaddioNanoConstant.HASH + streamSettings.getName();
 				if (isIPStreaming && streamSettings.isIPStreaming()) {
+					String key = VaddioNanoConstant.STREAMING_IP + VaddioNanoConstant.HASH + streamSettings.getName();
 					String value = extractResponseValue(response, streamSettings.getValue());
 					switch (streamSettings) {
 						case IP_VIDEO_QUALITY:
@@ -840,6 +837,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 					stats.put(key, value);
 				}
 				if (!isIPStreaming && !streamSettings.isIPStreaming()) {
+					String key = VaddioNanoConstant.STREAMING_USP + VaddioNanoConstant.HASH + streamSettings.getName();
 					String value = extractResponseValue(response, streamSettings.getValue());
 
 					if (streamSettings.getName().equals(StreamSettings.HID_AUDIO_CONTROLS_ENABLED.getName())) {
@@ -861,7 +859,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	 * @param stats the stats are list of statistics
 	 */
 	private void handleIPVideoQuality(String value, Map<String, String> stats) {
-		String group = VaddioNanoConstant.STREAMING_SETTINGS + VaddioNanoConstant.HASH;
+		String group = VaddioNanoConstant.STREAMING_IP + VaddioNanoConstant.HASH;
 		if (VaddioNanoConstant.CUSTOM.equalsIgnoreCase(value)) {
 			stats.remove(group + VaddioNanoConstant.IP_PRESET_RESOLUTION);
 		} else {
@@ -879,7 +877,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	 * @param stats the stats are list of statistics
 	 */
 	private void handleIPProtocol(String value, Map<String, String> stats) {
-		String group = VaddioNanoConstant.STREAMING_SETTINGS + VaddioNanoConstant.HASH;
+		String group = VaddioNanoConstant.STREAMING_IP + VaddioNanoConstant.HASH;
 		String ipProtocol = VaddioNanoConstant.RTSP;
 		if (VaddioNanoConstant.FALSE.equalsIgnoreCase(value)) {
 			stats.remove(group + VaddioNanoConstant.IP_RTMP_PORT);
@@ -901,7 +899,7 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 	 */
 	private void setDefaultNetworkInformation(Map<String, String> stats) {
 		for (NetworkInformation networkInfo : NetworkInformation.values()) {
-			stats.put(VaddioNanoConstant.STREAMING_SETTINGS + networkInfo.getName(), VaddioNanoConstant.NONE);
+			stats.put(VaddioNanoConstant.STREAMING_IP + networkInfo.getName(), VaddioNanoConstant.NONE);
 		}
 	}
 
@@ -955,16 +953,17 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 			}
 			if (isConfigManagement) {
 				retrieveMonitoringDataWithConfigManagement();
-			} else {
-				retrieveMonitoringDataWithDefaultConfigManagement();
 			}
 			isNextPollingInterval = true;
 		} else {
 			if (isConfigManagement) {
 				for (AudioCrosspoint command : AudioCrosspoint.values()) {
+
 					String commandItem = command.getCommand();
+					String crosspointGroup = VaddioNanoConstant.CROSSPOINT_GAIN + command.getName() + VaddioNanoConstant.HASH;
+					sendCommandDetails(commandItem + VaddioNanoConstant.ROUTES_COMMAND, crosspointGroup + VaddioNanoConstant.ENABLED_ROUTES);
 					for (AudioInput audioInputEnum : AudioInput.values()) {
-						String group = VaddioNanoConstant.CROSSPOINT_GAIN + command.getName() + VaddioNanoConstant.HASH + audioInputEnum.getPropertyName() + VaddioNanoConstant.GAIN;
+						String group = crosspointGroup + audioInputEnum.getPropertyName() + VaddioNanoConstant.GAIN;
 						sendCommandDetails(commandItem + VaddioNanoConstant.GAIN_COMMAND + audioInputEnum.getValue() + VaddioNanoConstant.GET, group);
 					}
 				}
@@ -987,21 +986,8 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		for (AudioCrosspoint command : AudioCrosspoint.values()) {
 			String group = command.getName() + VaddioNanoConstant.HASH;
 			String commandItem = command.getCommand();
-			sendCommandDetails(commandItem + VaddioNanoConstant.ROUTES_COMMAND, VaddioNanoConstant.CROSSPOINT_GAIN + group + VaddioNanoConstant.ENABLED_ROUTES);
 			sendCommandDetails(commandItem + VaddioNanoConstant.MUTE_COMMAND, group + VaddioNanoConstant.MUTE);
 			sendCommandDetails(commandItem + VaddioNanoConstant.VOLUME_COMMAND, group + VaddioNanoConstant.VOLUME);
-		}
-	}
-
-	/**
-	 * Retrieve monitoring Data With Default ConfigManagement
-	 *
-	 * @throws FailedLoginException if get the FailedLoginException
-	 */
-	private void retrieveMonitoringDataWithDefaultConfigManagement() throws FailedLoginException {
-		for (AudioCrosspoint command : AudioCrosspoint.values()) {
-			sendCommandDetails(command.getCommand() + VaddioNanoConstant.ROUTES_COMMAND,
-					VaddioNanoConstant.CROSSPOINT_GAIN + command.getName() + VaddioNanoConstant.HASH + VaddioNanoConstant.ENABLED_ROUTES);
 		}
 	}
 
@@ -1067,19 +1053,6 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 		slider.setRangeEnd(rangeEnd);
 
 		return new AdvancedControllableProperty(name, new Date(), slider, initialValue);
-	}
-
-	/**
-	 * Create Numeric is control property for metric
-	 *
-	 * @param name the name of the property
-	 * @param initialValue the initialValue is number
-	 * @return AdvancedControllableProperty Numeric instance
-	 */
-	private AdvancedControllableProperty createNumeric(String name, String initialValue) {
-		AdvancedControllableProperty.Numeric numeric = new AdvancedControllableProperty.Numeric();
-
-		return new AdvancedControllableProperty(name, new Date(), numeric, initialValue);
 	}
 
 	/**
