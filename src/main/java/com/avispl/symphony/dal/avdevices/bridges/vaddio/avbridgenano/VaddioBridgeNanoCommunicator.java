@@ -444,7 +444,8 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 			String currentValue = AudioInput.getValueByName(keyName).trim();
 			if (String.valueOf(VaddioNanoConstant.NUMBER_ONE).equalsIgnoreCase(value) && !data.contains(currentValue)) {
 				data = data + (VaddioNanoConstant.SPACE + currentValue);
-			} else {
+			}
+			if (String.valueOf(VaddioNanoConstant.ZERO).equalsIgnoreCase(value)) {
 				data = data.replace(currentValue, VaddioNanoConstant.EMPTY);
 			}
 			String command = EnumTypeHandler.getCommandByValue(AudioCrosspoint.class, groupName) + VaddioNanoConstant.ROUTES_CONTROL;
@@ -688,6 +689,10 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 						switch (audioInputEnum) {
 							case USB_PLAYBACK_LEFT:
 							case USB_PLAYBACK_RIGHT:
+								if (AudioCrosspoint.GAIN_IP_OUT_LEFT.equals(command) || AudioCrosspoint.GAIN_IP_OUT_RIGHT.equals(command) ||
+										AudioCrosspoint.GAIN_RECORD_OUT_LEFT.equals(command) || AudioCrosspoint.GAIN_RECORD_OUT_RIGHT.equals(command)) {
+									break;
+								}
 							case HDMI_IN_LEFT:
 							case HDMI_IN_RIGHT:
 							case LINE_IN_LEFT:

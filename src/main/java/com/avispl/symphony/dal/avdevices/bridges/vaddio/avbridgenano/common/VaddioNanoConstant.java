@@ -85,13 +85,11 @@ public class VaddioNanoConstant {
 	public static final String VIDEO_MUTE = "VideoMute";
 	public static final String AUDIO_COMMAND = "audio ";
 	public static final int NUMBER_ONE = 1;
+	public static final int ZERO = 0;
 	public static final String MIN_VOLUME = "-42";
 	public static final String MIN_VOLUME_LINE = "-48";
 	public static final String MAX_VOLUME = "6";
 	public static final String MIN_GAIN = "-12";
 	public static final String MAX_GAIN = "12";
 	public static final String ROUTE_MESSAGE = "invalid routing";
-	public static final String CONTROL_PROTOCOL = "ControlProtocolStatus";
-	public static final String UNAVAILABLE = "Unavailable";
-	public static final String REBOOT_STATUS = "RebootStatus";
 }
