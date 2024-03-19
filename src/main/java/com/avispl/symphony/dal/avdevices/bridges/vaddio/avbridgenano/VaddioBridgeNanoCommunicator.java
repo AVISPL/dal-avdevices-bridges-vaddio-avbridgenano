@@ -801,9 +801,9 @@ public class VaddioBridgeNanoCommunicator extends SshCommunicator implements Mon
 					logger.debug(String.format("the command %s doesn't support", command.getName()));
 					break;
 			}
-			controlStats.put(VaddioNanoConstant.SYSTEM_REBOOT, VaddioNanoConstant.EMPTY);
-			advancedControllableProperty.add(createButton(VaddioNanoConstant.SYSTEM_REBOOT, VaddioNanoConstant.REBOOT, VaddioNanoConstant.REBOOTING, 0L));
 		}
+		controlStats.put(VaddioNanoConstant.SYSTEM_REBOOT, VaddioNanoConstant.EMPTY);
+		advancedControllableProperty.add(createButton(VaddioNanoConstant.SYSTEM_REBOOT, VaddioNanoConstant.REBOOT, VaddioNanoConstant.REBOOTING, 0L));
 	}
 
 	/**
