@@ -66,7 +66,7 @@ public class VaddioBridgeNanoCommunicatorTest {
 		vaddioBridgeNanoCommunicator.setConfigManagement("true");
 		ExtendedStatistics extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
 		Map<String, String> stats = extendedStatistics.getStatistics();
-		Assertions.assertNull(stats.size());
+		Assertions.assertNull(stats);
 		extendedStatistics = (ExtendedStatistics) vaddioBridgeNanoCommunicator.getMultipleStatistics().get(0);
 		stats = extendedStatistics.getStatistics();
 		Assertions.assertEquals(168, stats.size());
